@@ -18,8 +18,8 @@ case class Foo(f: Long, o: Bar)
 object common {
   trait UseSpark[F[_]] {
     private def acquire(implicit S: Sync[F]): F[SparkSession] = S.delay {
-      val conf = new SparkConf() .setMaster("local[*]") .setAppName("frameless-first-example") .set("spark.ui.enabled", "false")
-      implicit val spark: SparkSession = SparkSession.builder().config(conf).appName("trial02").getOrCreate()
+      val conf = new SparkConf().setMaster("local[*]").setAppName("frameless-first-example").set("spark.ui.enabled", "false")
+      implicit val spark: SparkSession = SparkSession.builder().config(conf).appName("frameless-trial01").getOrCreate()
 
       spark.sparkContext.setLogLevel("WARN")
       spark
@@ -34,16 +34,15 @@ object common {
   implicit val readerIOApplicativeAsk: SparkAsk[Action] =
     askReader[IO, SparkSession]
 }
-object trial02 {
+object program {
   import common._
-  def program[F[_]](implicit S: Sync[F], F: SparkAsk[F]): F[Unit] = F.ask.flatMap { implicit spark =>
+  def apply[F[_]](implicit S: Sync[F], F: SparkAsk[F]): F[Unit] = F.ask.flatMap { implicit spark =>
     val fTypedDataset = TypedDataset.create(Foo(1,Bar("a",2)) :: Foo(10,Bar("b",20)) :: Nil)
     fTypedDataset.show[F]()
   }
 }
 object MainFramelesstrial01 extends IOApp with UseSpark[IO] {
   import common._
-  import trial02._
 
   def run(args: List[String]): IO[ExitCode] =
     useSpark(program[Action].run) as ExitCode.Success
